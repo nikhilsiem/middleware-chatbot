@@ -3,9 +3,9 @@ require('dotenv').config();
 const config = {
   port: process.env.PORT || 3001,
   nodeEnv: process.env.NODE_ENV || 'development',
-  openai: {
-    apiKey: process.env.OPENAI_API_KEY,
-    model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+  groq: {
+    apiKey: process.env.GROQ_API_KEY,
+    model: process.env.GROQ_MODEL || 'openai/gpt-oss-20b',
     timeout: 30000,
     maxRetries: 2
   },
@@ -24,8 +24,8 @@ const config = {
 
 // Validate required environment variables
 const validateConfig = () => {
-  if (!config.openai.apiKey) {
-    throw new Error('OPENAI_API_KEY is required in environment variables');
+  if (!config.groq.apiKey) {
+    throw new Error('GROQ_API_KEY is required in environment variables');
   }
 };
 

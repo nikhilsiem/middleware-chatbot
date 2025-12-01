@@ -17,22 +17,22 @@ const jsonErrorHandler = (err, req, res, next) => {
 };
 
 /**
- * Handle OpenAI specific errors
+ * Handle Groq specific errors
  */
-const openAIErrorHandler = (error, res) => {
-  if (error.code === 'insufficient_quota') {
-    return res.status(402).json(
+const groqErrorHandler = (error, res) => {
+  if (error.code === 'insufficient_quota' || error.code === 'rate_limit_exceeded') {
+    return res.status(429).json(
       ChatSchemas.createErrorResponse(
-        'OpenAI API quota exceeded',
-        'Please check your OpenAI account billing'
+        'Groq API rate limit exceeded',
+        'Please wait a moment and try again'
       )
     );
   }
 
-  if (error.code === 'invalid_api_key') {
+  if (error.code === 'invalid_api_key' || error.code === 'authentication_error') {
     return res.status(401).json(
       ChatSchemas.createErrorResponse(
-        'Invalid OpenAI API key',
+        'Invalid Groq API key',
         'Please check your API key configuration'
       )
     );
@@ -42,7 +42,7 @@ const openAIErrorHandler = (error, res) => {
     return res.status(400).json(
       ChatSchemas.createErrorResponse(
         'Model not available',
-        'The requested model is not available for your account'
+        'The requested model is not available'
       )
     );
   }
@@ -65,9 +65,9 @@ const openAIErrorHandler = (error, res) => {
 const globalErrorHandler = (err, req, res, next) => {
   console.error('Unhandled error:', err);
 
-  // Check for OpenAI errors
-  const openAIResponse = openAIErrorHandler(err, res);
-  if (openAIResponse) return;
+  // Check for Groq errors
+  const groqResponse = groqErrorHandler(err, res);
+  if (groqResponse) return;
 
   // Generic error response
   res.status(err.status || 500).json(
@@ -102,5 +102,5 @@ module.exports = {
   globalErrorHandler,
   notFoundHandler,
   requestLogger,
-  openAIErrorHandler
+  groqErrorHandler
 };

@@ -1,4 +1,4 @@
-const openAIService = require('../services/openai.service');
+const groqService = require('../services/groq.service');
 
 class HealthController {
   /**
@@ -18,16 +18,16 @@ class HealthController {
   }
 
   /**
-   * Test OpenAI connection
+   * Test Groq connection
    */
-  async testOpenAI(req, res, next) {
+  async testGroq(req, res, next) {
     try {
-      console.log('Testing OpenAI connection...');
-      const result = await openAIService.testConnection();
-      console.log('✅ OpenAI connection successful');
+      console.log('Testing Groq connection...');
+      const result = await groqService.testConnection();
+      console.log('✅ Groq connection successful');
       res.json(result);
     } catch (error) {
-      console.error('❌ OpenAI connection failed:', error.message);
+      console.error('❌ Groq connection failed:', error.message);
       res.status(500).json({
         success: false,
         error: error.message,

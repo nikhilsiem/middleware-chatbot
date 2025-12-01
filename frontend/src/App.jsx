@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Header from './components/Header';
 import Message from './components/Message';
 import LoadingIndicator from './components/LoadingIndicator';
@@ -6,13 +6,12 @@ import EmptyState from './components/EmptyState';
 import ErrorBanner from './components/ErrorBanner';
 import ChatInput from './components/ChatInput';
 import { chatAPI } from './services/api.service';
-import { useLocalStorage } from './hooks/useLocalStorage';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { getUserId, getErrorMessage } from './utils/helpers';
 import { MAX_MESSAGE_LENGTH, RETRY_DELAY, MAX_RETRIES, ERROR_MESSAGES } from './utils/constants';
 
 export default function AIChatbot() {
-  const [messages, setMessages] = useLocalStorage('chat_messages', []);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [userId] = useState(getUserId);
@@ -25,6 +24,7 @@ export default function AIChatbot() {
   // Load history from server on mount
   useEffect(() => {
     loadConversationHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Auto-scroll to bottom
@@ -53,6 +53,7 @@ export default function AIChatbot() {
       }
     } catch (error) {
       console.error('Error loading history:', error);
+      // Keep existing localStorage messages if server fails
     }
   };
 

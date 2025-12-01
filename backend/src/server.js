@@ -33,8 +33,9 @@ const server = app.listen(config.port, () => {
   console.log('=================================');
   console.log(`🚀 Server running on port ${config.port}`);
   console.log(`📡 Health check: http://localhost:${config.port}/health`);
-  console.log(`🧪 Test OpenAI: http://localhost:${config.port}/test-openai`);
+  console.log(`🧪 Test Groq: http://localhost:${config.port}/test-groq`);
   console.log(`🌍 Environment: ${config.nodeEnv}`);
+  console.log(`🤖 Model: ${config.groq.model}`);
   console.log('=================================');
 });
 

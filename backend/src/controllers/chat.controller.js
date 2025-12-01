@@ -1,4 +1,4 @@
-const openAIService = require('../services/openai.service');
+const groqService = require('../services/groq.service');
 const conversationService = require('../services/conversation.service');
 const ChatSchemas = require('../schemas/chat.schema');
 const { config } = require('../config/env');
@@ -42,17 +42,17 @@ class ChatController {
       const history = conversationService.getHistory(userId);
 
       // Determine message type and build prompt
-      const isSelfInquiry = openAIService.isSelfInquiry(sanitizedMessage);
+      const isSelfInquiry = groqService.isSelfInquiry(sanitizedMessage);
       let messages;
 
       if (isSelfInquiry && history.length > 2) {
-        messages = openAIService.buildPersonalityProfileMessages(history, sanitizedMessage);
+        messages = groqService.buildPersonalityProfileMessages(history, sanitizedMessage);
       } else {
-        messages = openAIService.buildRegularMessages(history);
+        messages = groqService.buildRegularMessages(history);
       }
 
       // Generate AI response
-      const completion = await openAIService.generateCompletion(messages, userId);
+      const completion = await groqService.generateCompletion(messages, userId);
 
       // Store assistant message
       conversationService.createAssistantMessage(userId, completion.content);

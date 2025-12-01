@@ -11,16 +11,24 @@ export const useLocalStorage = (key, initialValue) => {
     }
   });
 
-  const setValue = (value) => {
+  // Sync to localStorage whenever storedValue changes
+  useEffect(() => {
     try {
-      const valueToStore = value instanceof Function ? value(storedValue) : value;
-      setStoredValue(valueToStore);
-      window.localStorage.setItem(key, JSON.stringify(valueToStore));
+      window.localStorage.setItem(key, JSON.stringify(storedValue));
     } catch (error) {
       console.error(`Error saving ${key} to localStorage:`, error);
       if (error.name === 'QuotaExceededError') {
         console.warn('localStorage quota exceeded');
       }
+    }
+  }, [key, storedValue]);
+
+  const setValue = (value) => {
+    try {
+      const valueToStore = value instanceof Function ? value(storedValue) : value;
+      setStoredValue(valueToStore);
+    } catch (error) {
+      console.error(`Error setting ${key} value:`, error);
     }
   };
 
