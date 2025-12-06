@@ -1,9 +1,8 @@
-import React from 'react';
 import { User, Bot, AlertCircle } from 'lucide-react';
 import { formatTimestamp } from '../utils/helpers';
 
-const Message = ({ message }) => {
-  const { role, content, timestamp, isError } = message;
+const Message = ({ message, isLatest = false }) => {
+  const { role, content, timestamp, isError, isStreaming } = message;
 
   const getMessageClassName = () => {
     if (isError) {
@@ -42,7 +41,13 @@ const Message = ({ message }) => {
         )}
       </div>
       <div className={`flex-1 max-w-2xl ${getMessageClassName()} rounded-2xl px-5 py-4`}>
-        <p className="whitespace-pre-wrap leading-relaxed">{content}</p>
+        <p className="whitespace-pre-wrap leading-relaxed">
+          {content}
+          {/* Show cursor while streaming */}
+          {isStreaming && content && (
+            <span className="inline-block w-1 h-4 ml-1 bg-current animate-pulse" />
+          )}
+        </p>
         <p className={`text-xs mt-2 ${getTimestampClassName()}`}>
           {formatTimestamp(timestamp)}
         </p>

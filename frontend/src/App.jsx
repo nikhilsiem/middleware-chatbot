@@ -92,18 +92,60 @@ export default function AIChatbot() {
 
   const sendMessageWithRetry = async (userMessage, newUserMessage, attempt = 1) => {
     try {
-      const response = await chatAPI.sendMessage(userId, userMessage);
-
+      // Create placeholder assistant message for streaming
+      const assistantMessageId = Date.now();
       const assistantMessage = {
+        id: assistantMessageId,
         role: 'assistant',
-        content: response.message,
-        timestamp: new Date().toISOString()
+        content: '',
+        timestamp: new Date().toISOString(),
+        isStreaming: true
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      setRetryCount(0);
+
+      let fullContent = '';
+
+      await chatAPI.sendMessageStream(
+        userId,
+        userMessage,
+        // onChunk
+        (chunk) => {
+          fullContent += chunk;
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: fullContent }
+              : msg
+          ));
+        },
+        // onComplete
+        () => {
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessageId 
+              ? { ...msg, content: fullContent, isStreaming: false }
+              : msg
+          ));
+          setRetryCount(0);
+        },
+        // onError
+        (error) => {
+          if (attempt < MAX_RETRIES && error.message?.includes('500')) {
+            console.log(`Retry attempt ${attempt} of ${MAX_RETRIES}`);
+            setRetryCount(attempt);
+            // Remove the failed message
+            setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+            setTimeout(() => {
+              sendMessageWithRetry(userMessage, newUserMessage, attempt + 1);
+            }, RETRY_DELAY * attempt);
+          } else {
+            // Remove the failed message and show error
+            setMessages(prev => prev.filter(msg => msg.id !== assistantMessageId));
+            throw error;
+          }
+        }
+      );
     } catch (error) {
-      if (attempt < MAX_RETRIES && error.response?.status >= 500) {
+      if (attempt < MAX_RETRIES && error.message?.includes('500')) {
         console.log(`Retry attempt ${attempt} of ${MAX_RETRIES}`);
         setRetryCount(attempt);
         await new Promise(resolve => setTimeout(resolve, RETRY_DELAY * attempt));
@@ -167,7 +209,11 @@ export default function AIChatbot() {
           {messages.length === 0 && <EmptyState />}
 
           {messages.map((msg, idx) => (
-            <Message key={idx} message={msg} />
+            <Message 
+              key={idx} 
+              message={msg} 
+              isLatest={idx === messages.length - 1}
+            />
           ))}
 
           {loading && <LoadingIndicator />}

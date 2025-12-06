@@ -8,7 +8,7 @@ const router = express.Router();
 router.use(rateLimiter.middleware());
 
 // Chat routes
-router.post('/chat', chatController.sendMessage.bind(chatController));
+router.post('/chat/stream', chatController.sendMessageStream.bind(chatController));
 router.get('/conversations/:userId', chatController.getHistory.bind(chatController));
 router.delete('/conversations/:userId', chatController.clearHistory.bind(chatController));
 router.get('/users', chatController.getAllUsers.bind(chatController));

@@ -77,6 +77,41 @@ class GroqService {
   }
 
   /**
+   * Generate streaming chat completion
+   * @param {Array} messages - Array of message objects
+   * @param {string} userId - User identifier for monitoring
+   * @returns {AsyncGenerator<string>}
+   */
+  async *generateCompletionStream(messages, userId) {
+    try {
+      console.log(`Calling Groq API (streaming) with model: ${config.groq.model} for user: ${userId}`);
+
+      const stream = await this.client.chat.completions.create({
+        model: config.groq.model,
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 1000,
+        top_p: 1,
+        stream: true
+      });
+
+      let fullContent = '';
+      for await (const chunk of stream) {
+        const content = chunk.choices[0]?.delta?.content || '';
+        if (content) {
+          fullContent += content;
+          yield content;
+        }
+      }
+
+      // Return full content for storage
+      return fullContent;
+    } catch (error) {
+      throw this.handleGroqError(error);
+    }
+  }
+
+  /**
    * Build messages for personality profile
    * @param {Array} history - Conversation history
    * @param {string} currentMessage - Current user message

@@ -13,8 +13,9 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: config.cors.origin,
-  methods: ['GET', 'POST', 'DELETE'],
+  origin: config.cors.origin === '*' ? true : config.cors.origin,
+  credentials: true,
+  methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 

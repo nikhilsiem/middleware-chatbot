@@ -5,78 +5,6 @@ const { config } = require('../config/env');
 
 class ChatController {
   /**
-   * Send message and get AI response
-   */
-  async sendMessage(req, res, next) {
-    try {
-      const { userId, message } = req.body;
-
-      // Validate request
-      const validation = ChatSchemas.validateChatRequest(req.body);
-      if (!validation.valid) {
-        return res.status(400).json(
-          ChatSchemas.createErrorResponse(validation.error)
-        );
-      }
-
-      // Sanitize and validate message
-      const sanitizedMessage = conversationService.sanitizeInput(message);
-      if (!sanitizedMessage) {
-        return res.status(400).json(
-          ChatSchemas.createErrorResponse('message cannot be empty after sanitization')
-        );
-      }
-
-      if (sanitizedMessage.length > config.conversation.maxMessageLength) {
-        return res.status(400).json(
-          ChatSchemas.createErrorResponse(
-            `message is too long (max ${config.conversation.maxMessageLength} characters)`
-          )
-        );
-      }
-
-      // Create and store user message
-      conversationService.createUserMessage(userId, sanitizedMessage);
-
-      // Get conversation history
-      const history = conversationService.getHistory(userId);
-
-      // Determine message type and build prompt
-      const isSelfInquiry = groqService.isSelfInquiry(sanitizedMessage);
-      let messages;
-
-      if (isSelfInquiry && history.length > 2) {
-        messages = groqService.buildPersonalityProfileMessages(history, sanitizedMessage);
-      } else {
-        messages = groqService.buildRegularMessages(history);
-      }
-
-      // Generate AI response
-      const completion = await groqService.generateCompletion(messages, userId);
-
-      // Store assistant message
-      conversationService.createAssistantMessage(userId, completion.content);
-
-      // Get updated history
-      const updatedHistory = conversationService.getHistory(userId);
-
-      console.log(`✅ Response generated for user: ${userId}`);
-
-      // Send response
-      res.json(
-        ChatSchemas.createChatResponse(
-          completion.content,
-          updatedHistory.length,
-          completion.tokensUsed
-        )
-      );
-    } catch (error) {
-      console.error('❌ Error in sendMessage:', error);
-      next(error);
-    }
-  }
-
-  /**
    * Get conversation history
    */
   async getHistory(req, res, next) {
@@ -90,7 +18,7 @@ class ChatController {
         );
       }
 
-      const conversations = conversationService.getHistory(userId);
+      const conversations = await conversationService.getHistory(userId);
 
       res.json({
         conversations,
@@ -116,7 +44,7 @@ class ChatController {
         );
       }
 
-      const existed = conversationService.clearHistory(userId);
+      const existed = await conversationService.clearHistory(userId);
 
       console.log(`Cleared conversation history for user: ${userId}`);
 
@@ -132,12 +60,101 @@ class ChatController {
   }
 
   /**
+   * Send message and get AI response (streaming)
+   */
+  async sendMessageStream(req, res, next) {
+    try {
+      const { userId, message } = req.body;
+
+      // Validate request
+      const validation = ChatSchemas.validateChatRequest(req.body);
+      if (!validation.valid) {
+        return res.status(400).json(
+          ChatSchemas.createErrorResponse(validation.error)
+        );
+      }
+
+      // Validate input
+      const inputValidation = conversationService.validateInput(message);
+      if (!inputValidation.valid) {
+        return res.status(400).json(
+          ChatSchemas.createErrorResponse(inputValidation.error || 'Invalid input')
+        );
+      }
+
+      // Sanitize message
+      const sanitizedMessage = conversationService.sanitizeInput(message);
+      if (!sanitizedMessage) {
+        return res.status(400).json(
+          ChatSchemas.createErrorResponse('message cannot be empty after sanitization')
+        );
+      }
+
+      // Create and store user message
+      await conversationService.createUserMessage(userId, sanitizedMessage);
+
+      // Get conversation history
+      const history = await conversationService.getHistory(userId);
+
+      // Determine message type and build prompt
+      const isSelfInquiry = groqService.isSelfInquiry(sanitizedMessage);
+      let messages;
+
+      if (isSelfInquiry && history.length > 2) {
+        messages = groqService.buildPersonalityProfileMessages(history, sanitizedMessage);
+      } else {
+        messages = groqService.buildRegularMessages(history);
+      }
+
+      // Set up SSE headers
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+
+      let fullContent = '';
+
+      try {
+        // Stream the response
+        for await (const chunk of groqService.generateCompletionStream(messages, userId)) {
+          fullContent += chunk;
+          // Send chunk as SSE
+          res.write(`data: ${JSON.stringify({ content: chunk, done: false })}\n\n`);
+        }
+
+        // Store assistant message
+        await conversationService.createAssistantMessage(userId, fullContent);
+
+        // Send completion signal
+        res.write(`data: ${JSON.stringify({ content: '', done: true, tokensUsed: 0 })}\n\n`);
+        res.end();
+
+        console.log(`✅ Streaming response completed for user: ${userId}`);
+      } catch (streamError) {
+        console.error('❌ Error during streaming:', streamError);
+        res.write(`data: ${JSON.stringify({ error: 'Streaming error occurred', done: true })}\n\n`);
+        res.end();
+      }
+    } catch (error) {
+      console.error('❌ Error in sendMessageStream:', error);
+      if (!res.headersSent) {
+        res.status(500).json(
+          ChatSchemas.createErrorResponse(error.message)
+        );
+      } else {
+        res.write(`data: ${JSON.stringify({ error: error.message, done: true })}\n\n`);
+        res.end();
+      }
+    }
+  }
+
+  /**
    * Get all users
    */
   async getAllUsers(req, res, next) {
     try {
-      const users = conversationService.getAllUsers();
-      const totalMessages = conversationService.getTotalMessageCount();
+      const users = await conversationService.getAllUsers();
+      const totalMessages = await conversationService.getTotalMessageCount();
 
       res.json({
         users,

@@ -26,7 +26,7 @@ export const getErrorMessage = (error) => {
       case 401:
         return 'Authentication failed - check API key';
       case 402:
-        return 'OpenAI quota exceeded - check your billing';
+        return 'API quota exceeded - check your billing';
       case 429:
         return `Too many requests. Please wait ${data.retryAfter || 60} seconds.`;
       case 500:

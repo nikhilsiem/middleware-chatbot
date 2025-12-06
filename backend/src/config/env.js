@@ -10,7 +10,7 @@ const config = {
     maxRetries: 2
   },
   cors: {
-    origin: process.env.CORS_ORIGIN || '*'
+    origin: process.env.CORS_ORIGIN || process.env.FRONTEND_URL || (process.env.NODE_ENV === 'production' ? false : 'http://localhost:5173')
   },
   rateLimit: {
     windowMs: 60000, // 1 minute
@@ -19,6 +19,11 @@ const config = {
   conversation: {
     maxMessageLength: 5000,
     maxHistoryLength: 100
+  },
+  database: {
+    url: process.env.DATABASE_URL,
+    // If DATABASE_URL is not set, we'll use in-memory storage as fallback
+    enabled: !!process.env.DATABASE_URL
   }
 };
 
